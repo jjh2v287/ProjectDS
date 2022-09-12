@@ -2,6 +2,10 @@
 
 
 #include "ActorSpawn.h"
+#include "Kismet/GameplayStatics.h"
+#include "DrawDebugHelpers.h"
+#include "NavigationSystem.h"
+#include "Algo/RemoveIf.h"
 
 // Sets default values
 AActorSpawn::AActorSpawn()
@@ -15,13 +19,71 @@ AActorSpawn::AActorSpawn()
 void AActorSpawn::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	World = GetWorld();
+	ProcessSpawn();
 }
 
 // Called every frame
 void AActorSpawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 }
 
+void AActorSpawn::ProcessSpawn()
+{
+	if (!World.Get())
+		return;
+
+	int MaxSpawnCount = SpawnCellX * SpawnCellY;
+	for (int XCount = 0; XCount < SpawnCellX; XCount++)
+	{
+		float sX = -(((SpawnCellSize * SpawnCellX)) / 2) + (SpawnCellSize * XCount);
+		for (int YCount = 0; YCount < SpawnCellY; YCount++)
+		{
+			float sY = -(((SpawnCellSize * SpawnCellY)) / 2) + (SpawnCellSize * YCount);
+			APawn* Pawn = World->SpawnActorDeferred<APawn>(SpawnTargetClass, FTransform::Identity, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+			FTransform NewTransform;
+			FVector NewLocation = FVector::ZeroVector;
+			NewLocation.X = sX;
+			NewLocation.Y = sY;
+
+			{
+				const ANavigationData* NavData = FindNavigationDataForActor();
+				if (NavData)
+				{
+					const ANavigationData& refNavData = *NavData;
+					FSharedConstNavQueryFilter NavigationFilter;
+					FNavLocation OutLocation;
+					const FVector ProjectionExtent(0.0f, 0.0f, 1024.0f);
+					refNavData.ProjectPoint(NewLocation, OutLocation, ProjectionExtent, NavigationFilter);
+					NewLocation = OutLocation.Location;
+					NewLocation.Z += 88.0f;
+				}
+			}
+
+			NewTransform.SetLocation(NewLocation);
+			UGameplayStatics::FinishSpawningActor(Pawn, NewTransform);
+		}
+	}
+}
+
+const ANavigationData* AActorSpawn::FindNavigationDataForActor()
+{
+	const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World.Get());
+
+	if (NavSys == nullptr)
+	{
+		return nullptr;
+	}
+
+	// try to match navigation agent for querier
+	INavAgentInterface* NavAgent = GetOwner() ? Cast<INavAgentInterface>(GetOwner()) : NULL;
+	if (NavAgent)
+	{
+		const FNavAgentProperties& NavAgentProps = NavAgent->GetNavAgentPropertiesRef();
+		return NavSys->GetNavDataForProps(NavAgentProps, NavAgent->GetNavAgentLocation());
+	}
+
+	return NavSys->GetDefaultNavDataInstance();
+}

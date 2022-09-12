@@ -6,11 +6,9 @@
 
 void UDSAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-	if (TryGetPawnOwner())
+	TWeakObjectPtr<APawn> Pawn = TryGetPawnOwner();
+	if (Pawn.Get())
 	{
-		if (TryGetPawnOwner()->GetMovementComponent())
-		{
-			Speed = TryGetPawnOwner()->GetMovementComponent()->Velocity.Size();
-		}
+		Speed = Pawn->GetVelocity().Size();
 	}
 }
