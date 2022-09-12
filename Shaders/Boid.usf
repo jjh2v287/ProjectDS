@@ -1,0 +1,229 @@
+//Since we can't #include private Engine shaders such as Common.ush we have to copy the needed Shaders from the Engine' Shader directory.
+//When this gets chaned in the future, we could change this to #include "/Engine/Private/Common.ush".
+#include "/Engine/Private/Common.ush"
+
+#include "HashedGrid.usf"
+
+//--------------------------------------------------------------------------------------
+// Buffers
+//--------------------------------------------------------------------------------------
+
+float dt;
+float totalTime;  
+
+float boidSpeed;
+float boidSpeedVariation;
+float boidRotationSpeed;
+
+float neighbourhoodDistance;
+
+float separationDistance;
+float homeInnerRadius;
+
+float homeUrge;
+float separationUrge;
+float cohesionUrge;
+float alignmentUrge;
+
+RWStructuredBuffer<float4> positions_other;
+RWStructuredBuffer<float4> directions;
+RWStructuredBuffer<float4> directions_other;
+
+RWStructuredBuffer<float4> newDirections;
+
+
+
+float distanceSqrd(float3 a, float3 b)
+{
+    float3 dir = a - b;
+    return dot(dir, dir);
+}
+
+float3 safeNormal(float3 vec)
+{
+    float l = length(vec);
+    
+    return l > 0.0f ? vec / l : float3(0.0f, 0.0f, 0.0f);
+}
+
+
+//--------------------------------------------------------------------------------------
+// Functions
+//--------------------------------------------------------------------------------------
+float hash( float n )
+{
+	return frac(sin(n)*43758.5453);
+}
+
+// The noise function returns a value in the range -1.0f -> 1.0f
+float noise1( float3 x )
+{
+	float3 p = floor(x);
+	float3 f = frac(x);
+
+	f       = f*f*(3.0-2.0*f);
+	float n = p.x + p.y*57.0 + 113.0*p.z;
+
+	return lerp(lerp(lerp( hash(n+0.0), hash(n+1.0),f.x),
+					lerp( hash(n+57.0), hash(n+58.0),f.x),f.y),
+				lerp(lerp( hash(n+113.0), hash(n+114.0),f.x),
+					lerp( hash(n+170.0), hash(n+171.0),f.x),f.y),f.z);
+}
+
+// CSVariables:
+// float boidSpeed
+// float boidSpeedVariation
+// float dt
+// float totalTime
+// float neighbourDistance
+
+float3 safeNormal(float3 vec, float3 safe)
+{
+    float l = length(vec);
+    
+    return l > 0.0f ? vec / l : safe;
+}
+
+[numthreads(256, 1, 1)]
+void GridNeighboursBoidUpdate(uint3 ThreadId : SV_DispatchThreadID)
+{
+    int index = ThreadId.x;
+
+    if( index >= numParticles )
+        return;
+    
+    const float3 position_a = positions[index];
+    const float3 direction_a = directions[index];
+    
+
+
+    float3 separation = float3(0.0, 0.0, 0.0);
+    float3 alignment = float3(0.0, 0.0, 0.0);
+    float3 neighboursCentre = position_a;
+
+    int3 cellIndex = positionToCellIndex(position_a);
+    uint count = 1;
+    
+    for(int i = -1; i <= 1; ++i)
+    {
+        for(int j = -1; j <= 1; ++j)
+        {
+            for(int k = -1; k <= 1; ++k)
+            {
+                int3 neighborIndex = cellIndex + int3(k, j, i);
+                uint flatNeighborIndex = getFlatCellIndex(neighborIndex);
+
+                // look up the offset to the cell:
+                uint neighborIterator = cellOffsetBuffer[flatNeighborIndex];
+
+                // iterate through particles in the neighbour cell (if iterator offset is valid)
+                while(neighborIterator != 0xFFFFFFFF && neighborIterator < numParticles)
+                {
+                    uint particleIndexB = particleIndexBuffer[neighborIterator];
+
+                    if (cellIndexBuffer[particleIndexB] != flatNeighborIndex)
+                        break; // we hit the end of this neighbourhood list
+
+                    float3 position_b = positions[particleIndexB];
+
+                    float dist = distance(position_b, position_a);
+
+                    if (dist < neighbourhoodDistance && particleIndexB != index)
+                    {
+                        neighboursCentre += position_b;
+                        
+                        count++;
+                        
+                        alignment += directions[particleIndexB];
+
+                        float3 dir = position_b - position_a;
+                        
+                        if (dist < separationDistance && dist > 0.0f)
+                        {
+                            float d = separationDistance - dist;
+
+                            separation -= (dir / dist) * d;// * d;
+                        }
+                    }
+
+                    neighborIterator++;  // iterate...
+                }
+            }
+        }
+    }
+
+    // cohesion
+    float3 cohesion;
+
+    if (count > 0)
+    {
+        neighboursCentre *= 1.0f / float(count);
+        cohesion = neighboursCentre - position_a;
+        
+        //cohesion = safeNormal(cohesion);
+    }
+    else
+        cohesion = float3(0.0f, 0.0f, 0.0f);
+
+
+	//separation = safeNormal(separation, float3(0.0f, 0.0f, 0.0f));
+    alignment = safeNormal(alignment, float3(0.0f, 0.0f, 0.0f));
+
+    // home
+    float3 home = float3(0.0f, 0.0f, 0.0f);
+    
+    float distFromHome = distance(home, position_a);
+    
+    float3 homeDir = float3(0.0f, 0.0f, 0.0f);
+
+    if (distFromHome > homeInnerRadius)
+        homeDir = safeNormal(home - position_a, float3(0.0f, 0.0f, 0.0f));
+
+    
+
+    float3 newDirection = alignment * alignmentUrge
+     + separation * separationUrge
+     + cohesion * cohesionUrge
+     + homeDir * homeUrge;
+    
+   // newDirection = safeNormal(newDirection, direction_a);
+
+    float ip = exp(-boidRotationSpeed * dt);
+    newDirection = lerp(newDirection, direction_a, ip);
+    
+    newDirection = safeNormal(newDirection, direction_a);
+    
+    newDirections[index].xyz = newDirection;
+}
+
+[numthreads(256, 1, 1)]
+void IntegrateBoidPosition(uint3 ThreadId : SV_DispatchThreadID)
+{
+    int index = ThreadId.x;
+
+    if (index >= numParticles)
+        return;
+    
+    float3 direction = newDirections[index];
+    
+    directions[index].xyz = direction.xyz;
+    
+    float noiseOffset = hash(float(index));
+
+    float noise = clamp(noise1(totalTime / 100.0 + noiseOffset), -1, 1) * 2.0 - 1.0;
+    float velocity = boidSpeed * (1.0 + noise * boidSpeedVariation);
+    
+    positions[index].xyz = positions[index].xyz + direction * (velocity * dt);
+}
+
+[numthreads(256, 1, 1)]
+void rearrangePositions(uint3 ThreadId : SV_DispatchThreadID)
+{
+    int index = ThreadId.x;
+
+    if (index >= numParticles)
+        return;
+    
+    positions_other[index] = positions[particleIndexBuffer[index]];
+    directions_other[index] = directions[particleIndexBuffer[index]];
+}

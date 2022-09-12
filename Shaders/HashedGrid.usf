@@ -1,0 +1,78 @@
+// Copyright Timothy Davison 2020, all rights reserved.
+
+#include "/Engine/Private/Common.ush"
+
+// This code is inspired by this blog post on dynamic hashed grids for scalable fluid simulations:
+// https://wickedengine.net/2018/05/21/scalabe-gpu-fluid-simulation/
+
+uint cellOffsetBufferSize;
+uint3 gridDimensions;
+uint numParticles;
+float cellSizeReciprocal;
+
+RWStructuredBuffer<uint> particleIndexBuffer;
+RWStructuredBuffer<uint> cellIndexBuffer;   
+RWStructuredBuffer<uint> cellOffsetBuffer; 
+
+RWStructuredBuffer<float4> positions; 
+
+float timMod(float x, float y)
+{
+    return x - y * floor(x / y);
+}
+
+uint getFlatCellIndex(int3 cellIndex)
+{
+    int n = cellIndex.x + cellIndex.y * gridDimensions.x + cellIndex.z * gridDimensions.x * gridDimensions.y;
+    
+    n = timMod(n, cellOffsetBufferSize);
+
+    return n;
+}
+
+int3 positionToCellIndex(float3 position)
+{
+    return floor(position * cellSizeReciprocal);
+}
+
+[numthreads(256, 1, 1)]
+void createUnsortedList(uint3 ThreadId : SV_DispatchThreadID)
+{  
+    if (ThreadId.x >= numParticles)
+        return;
+    
+    uint particleIndex = ThreadId.x;
+
+    particleIndexBuffer[ThreadId.x] = ThreadId.x;
+
+    float3 position = positions[particleIndex];
+    int3 cellIndex = positionToCellIndex(position);
+
+    uint flatCellIndex = getFlatCellIndex(cellIndex);
+
+    cellIndexBuffer[particleIndex] = flatCellIndex;
+}
+
+[numthreads(256, 1, 1)]
+void createOffsetList(uint3 ThreadId : SV_DispatchThreadID)
+{
+    if (ThreadId.x >= numParticles)
+        return;
+    
+  
+    uint particleIndex = particleIndexBuffer[ThreadId.x];
+   
+
+    uint cellIndex = cellIndexBuffer[particleIndex];
+
+    InterlockedMin(cellOffsetBuffer[cellIndex], ThreadId.x);
+}
+
+[numthreads(256, 1, 1)]
+void resetCellOffsetBuffer(uint3 ThreadId : SV_DispatchThreadID)
+{
+    if (ThreadId.x >= cellOffsetBufferSize)
+        return;
+    
+    cellOffsetBuffer[ThreadId.x] = 0xFFFFFFFF;
+}
