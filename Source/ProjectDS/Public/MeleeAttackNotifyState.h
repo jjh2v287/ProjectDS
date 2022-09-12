@@ -14,7 +14,7 @@ class PROJECTDS_API UMeleeAttackNotifyState : public UAnimNotifyState
 {
 	GENERATED_BODY()
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DamageTrace)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = DamageTrace)
 	TWeakObjectPtr<UAnimMontage> Montage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = DamageTrace)
 	FName StartSocketName;
