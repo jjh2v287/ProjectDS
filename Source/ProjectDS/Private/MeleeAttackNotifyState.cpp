@@ -137,8 +137,16 @@ void UMeleeAttackNotifyState::HitCheck(FBranchingPointNotifyPayload& BranchingPo
 			{
 				// º» °èÃþ ±¸Á¶ ¸ðµÎ Çà·Ä °ö
 				int Track = OutBoneData[StartBoneIndex].BonesToRoot[j];
-				FTransform BoneTransform;
+				FTransform BoneTransform = FTransform::Identity;
 				AnimSeq->ExtractBoneTransform(AnimSeq->GetRawAnimationTrack(Track), BoneTransform, AnimTime);
+
+				// UE5
+				float SequenceLength = AnimSeq->GetPlayLength();
+				const FBoneAnimationTrack& TrackData = AnimSeq->GetDataModel()->GetBoneTrackByIndex(Track);
+				const FRawAnimSequenceTrack& RawTrack = TrackData.InternalTrackData;
+				const int32 TotalFrames = FMath::Max(RawTrack.PosKeys.Num(), RawTrack.RotKeys.Num());
+				FTransform BoneTransform2 = FTransform::Identity;
+				FAnimationUtils::ExtractTransformFromTrack(AnimTime, TotalFrames, SequenceLength, RawTrack, EAnimInterpolationType::Linear, BoneTransform2);
 
 				StartTransform = BoneTransform * StartTransform;
 				StartTransform.NormalizeRotation();
