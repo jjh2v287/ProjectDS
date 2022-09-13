@@ -42,6 +42,8 @@ public:
 	UPROPERTY(Transient)
 	TArray<USFTickLodComponent*> AgentComponents;
 
+	FSceneView* SceneView;
+
 	FCriticalSection Mutex;
 
 public:

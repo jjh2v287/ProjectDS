@@ -104,6 +104,22 @@ void UTickLodSubsystem::Tick(float DeltaTime)
 			LineEnd.Z = CameraLocation.Z;
 			//UKismetSystemLibrary::DrawDebugArrow(GetWorld(), CameraLocation, LineEnd, 10, FLinearColor::Black, 0.0f, 1);
 		}
+
+		{
+			ULocalPlayer* LocalPlayer = Player->GetWorld()->GetFirstLocalPlayerFromController();
+			if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
+			{
+				FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+					LocalPlayer->ViewportClient->Viewport,
+					Player->GetWorld()->Scene,
+					LocalPlayer->ViewportClient->EngineShowFlags)
+					.SetRealtimeUpdate(true));
+
+				FVector ViewLocation;
+				FRotator ViewRotation;
+				SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
+			}
+		}
 	}
 
 	TRACE_CPUPROFILER_EVENT_SCOPE(TEXT("TickLodSubsystem::Tick"))
@@ -175,22 +191,9 @@ void UTickLodSubsystem::Tick(float DeltaTime)
 
 bool UTickLodSubsystem::IsInFrustum(AActor* Actor)
 {
-	ULocalPlayer* LocalPlayer = Actor->GetWorld()->GetFirstLocalPlayerFromController();
-	if (LocalPlayer != nullptr && LocalPlayer->ViewportClient != nullptr && LocalPlayer->ViewportClient->Viewport)
+	if (SceneView != nullptr)
 	{
-		FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
-			LocalPlayer->ViewportClient->Viewport,
-			Actor->GetWorld()->Scene,
-			LocalPlayer->ViewportClient->EngineShowFlags)
-			.SetRealtimeUpdate(true));
-
-		FVector ViewLocation;
-		FRotator ViewRotation;
-		FSceneView* SceneView = LocalPlayer->CalcSceneView(&ViewFamily, ViewLocation, ViewRotation, LocalPlayer->ViewportClient->Viewport);
-		if (SceneView != nullptr)
-		{
-			return SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius());
-		}
+		return SceneView->ViewFrustum.IntersectSphere(Actor->GetActorLocation(), Actor->GetSimpleCollisionRadius()*2);
 	}
 	return false;
 }
