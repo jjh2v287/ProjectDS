@@ -146,10 +146,10 @@ void UTickLodSubsystem::Tick(float DeltaTime)
 
 						FVector DeltaLocation = CameraLocation - AgentLocation;
 
+						//bool bIsInFrustum = IsInFrustum(Agent);
+						//if (!bIsInFrustum)
 						float dot = FVector::DotProduct(CameraForward, DeltaLocation.GetSafeNormal2D());
-						//if (dot > 0.f)
-						bool bIsInFrustum = IsInFrustum(Agent);
-						if (!bIsInFrustum)
+						if (dot > 0.f)
 						{
 							// ¼û±è
 							Mutex.Lock();
