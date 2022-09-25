@@ -6,6 +6,7 @@
 #include "DrawDebugHelpers.h"
 #include "NavigationSystem.h"
 #include "Algo/RemoveIf.h"
+#include "GameFramework/Character.h"
 
 // Sets default values
 AActorSpawn::AActorSpawn()
@@ -42,7 +43,7 @@ void AActorSpawn::ProcessSpawn()
 		for (int YCount = 0; YCount < SpawnCellY; YCount++)
 		{
 			float sY = -(((SpawnCellSize * SpawnCellY)) / 2) + (SpawnCellSize * YCount);
-			APawn* Pawn = World->SpawnActorDeferred<APawn>(SpawnTargetClass, FTransform::Identity, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+			ACharacter* Character = World->SpawnActorDeferred<ACharacter>(SpawnTargetClass, FTransform::Identity, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 			FTransform NewTransform;
 			FVector NewLocation = FVector::ZeroVector;
 			NewLocation.X = sX;
@@ -63,7 +64,11 @@ void AActorSpawn::ProcessSpawn()
 			}
 
 			NewTransform.SetLocation(NewLocation);
-			UGameplayStatics::FinishSpawningActor(Pawn, NewTransform);
+			UGameplayStatics::FinishSpawningActor(Character, NewTransform);
+			/*
+				AI NPC 또는 몬스터 스폰시 AIController이 정상적으로 붙지않을때 확인.
+				AutoPossessAI EAutoPossessAI::PlacedInWorldOrSpawned
+			*/
 		}
 	}
 }

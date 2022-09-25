@@ -148,6 +148,8 @@ void UTickLodSubsystem::Tick(float DeltaTime)
 
 						//bool bIsInFrustum = IsInFrustum(Agent);
 						//if (!bIsInFrustum)
+						//bool IsRendered = Agent->WasRecentlyRendered(GetWorld()->GetDeltaSeconds());
+						//if(!IsRendered)
 						float dot = FVector::DotProduct(CameraForward, DeltaLocation.GetSafeNormal2D());
 						if (dot > 0.f)
 						{
@@ -172,10 +174,11 @@ void UTickLodSubsystem::Tick(float DeltaTime)
 						}
 
 						TRACE_CPUPROFILER_EVENT_SCOPE(TEXT("TickLodSubsystem::LineTraceSingleByChannel"))
+						const ECollisionChannel CollisionChannel = Player->GetRootComponent()->GetCollisionObjectType();
 						FVector TraceStart = CameraLocation + FVector(0.f, 0.f, 20.f);
 						FVector TraceEnd = CameraLocation - FVector(0.f, 0.f, 20.f);
 						FHitResult FloorHit;
-						bool bFindFloor = GetWorld()->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, ECC_Visibility);
+						bool bFindFloor = GetWorld()->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, CollisionChannel);
 						if (bFindFloor)
 						{
 							FloorHit.Location;

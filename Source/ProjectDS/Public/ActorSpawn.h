@@ -18,7 +18,7 @@ public:
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ActorSpawn)
-	TSubclassOf<APawn> SpawnTargetClass;
+	TSubclassOf<ACharacter> SpawnTargetClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = ActorSpawn)
 	int SpawnCellX = 32;

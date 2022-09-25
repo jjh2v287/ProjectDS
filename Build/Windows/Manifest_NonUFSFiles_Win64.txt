@@ -1,6 +1,6 @@
 ProjectDS/Binaries/Win64/D3D12/D3D12Core.dll	2022-07-29T09:08:45.074Z
 ProjectDS/Binaries/Win64/OpenImageDenoise.dll	2022-03-17T16:07:16.098Z
-ProjectDS/Binaries/Win64/ProjectDS-Win64-Shipping.exe	2022-09-13T11:16:08.633Z
+ProjectDS/Binaries/Win64/ProjectDS-Win64-Shipping.exe	2022-09-25T15:04:47.939Z
 ProjectDS/Binaries/Win64/tbb.dll	2022-03-17T15:45:41.545Z
 ProjectDS/Binaries/Win64/tbb12.dll	2022-03-17T16:07:12.727Z
 Engine/Extras/Redist/en-us/UEPrereqSetup_x64.exe	2022-03-17T15:51:15.759Z
@@ -16,4 +16,4 @@ Engine/Binaries/ThirdParty/PhysX3/Win64/VS2015/PxPvdSDK_x64.dll	2022-03-17T15:46
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbis_64.dll	2022-03-17T15:46:10.332Z
 Engine/Binaries/ThirdParty/Vorbis/Win64/VS2015/libvorbisfile_64.dll	2022-03-17T15:46:10.346Z
 Engine/Binaries/ThirdParty/Windows/XAudio2_9/x64/xaudio2_9redist.dll	2022-03-17T15:46:10.997Z
-ProjectDS.exe	2022-09-13T11:16:23.218Z
+ProjectDS.exe	2022-09-25T15:05:05.490Z
