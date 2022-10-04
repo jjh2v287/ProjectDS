@@ -6,5 +6,6 @@
 UDSCharacterMovementComponent::UDSCharacterMovementComponent()
 {
 	PrimaryComponentTick.bRunOnAnyThread = true;
-	MovementMode = EMovementMode::MOVE_Custom;
+	DefaultLandMovementMode = EMovementMode::MOVE_Custom;
+	DefaultWaterMovementMode = EMovementMode::MOVE_Custom;
 }
